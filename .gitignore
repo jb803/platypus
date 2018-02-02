@@ -12,3 +12,7 @@ sdist
 .tox
 .cache
 cov_html
+
+#Ignore the output from the cea download and build process
+cea/*
+!cea/getCea.sh
