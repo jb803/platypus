@@ -12,3 +12,6 @@ sdist
 .tox
 .cache
 cov_html
+
+#Ignore sphinx output
+doc/build
