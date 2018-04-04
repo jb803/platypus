@@ -11,14 +11,6 @@ set -xe
 
 # Refresh the apt package cache and install the apt repository management
 # tooling.
-#sudo apt-get -y update
-#sudo apt-get -y install software-properties-common
+sudo apt-get -y update
+sudo apt-get -y install software-properties-common
 
-# Setup CEA
-
-echo $PWD
-#Change to directory of this script
-cd "${0%/*}"
-cd ../../cea
-./getCea.sh
-echo "export CEA_DIR=$PWD" >> ~/.bashrc
