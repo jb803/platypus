@@ -9,3 +9,5 @@ gfortran cea2.f -o cea2
 #Generates the thermo and transport libraries
 echo 'trans'  | ./cea2
 echo 'thermo' | ./cea2
+#Create CEA_DIR
+export CEA_DIR=$PWD
