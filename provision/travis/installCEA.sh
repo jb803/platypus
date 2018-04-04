@@ -5,4 +5,4 @@ echo $PWD
 cd "${0%/*}"
 cd ../../cea
 ./getCea.sh
-echo "export CEA_DIR=$PWD" >> /etc/bash.bashrc
+sudo echo "export CEA_DIR=$PWD" >> /etc/bash.bashrc
