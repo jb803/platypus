@@ -9,6 +9,7 @@ sudo: true
 before_install:
   - sudo apt-get install gfortran
   - provision/travis/installCEA.sh
+  - source /etc/profile.d/cea.sh
 install:
   - provision/travis/install.sh
   - pip install -r provision/travis/requirements.txt

@@ -1,3 +1,4 @@
+#!/bin/bash
 # Setup CEA
 
 echo $PWD
@@ -5,4 +6,5 @@ echo $PWD
 cd "${0%/*}"
 cd ../../cea
 ./getCea.sh
-echo "export CEA_DIR=$PWD" >> ~/.bashrc
+echo '#!/bin/bash' >> /etc/profile.d/cea.sh
+echo "export CEA_DIR=$PWD" >> /etc/profile.d/cea.sh
