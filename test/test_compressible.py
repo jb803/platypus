@@ -3,8 +3,6 @@ import numpy as np
 import math
 from platypus import compressible as c
 
-import matplotlib.pyplot as plt
-
 """Test cases for the compressible relations in compressible.py"""
 
 def tolerance(computedValue,targetValue,tolerance):
@@ -218,30 +216,13 @@ def test_solver_shockTube():
     #We time march
     t = 0.
     targT = 0.2*(1./aR) #Target non dimensional t
-    iteration = 0
-    plt.subplot(311)
+    
     while t < targT:
         deltaT = targT - t #Desired timestep
         
         deltaT = solver.timestep(0.5,deltaT)
-        analyticSolution = calcAnalyticalSolution(t)
         
-        if iteration % 5 == 0:
-            plt.clf()
-            plt.subplot(3,1,1)
-            plt.plot(cellCentres,states[0,:],'k')
-            plt.plot(cellCentres,analyticSolution[0,:],'r')
-            plt.title('Density')
-            plt.subplot(3,1,2)
-            plt.plot(cellCentres,wv[0,:])
-            plt.title('Velocity')
-            plt.subplot(3,1,3)
-            plt.plot(cellCentres,wv[1,:])
-            plt.title('Pressure')
-            plt.savefig('out.png')
-            raw_input()
         t += deltaT
-        iteration +=1
         
     analyticSolution = calcAnalyticalSolution(t)
     
@@ -411,23 +392,10 @@ def test_solver_nozzle():
     t       = 0.
     targT   = 0.02
     
-    iteration = 0
     while t < targT:
         deltaT = targT-t
         deltaT = solver.timestep(0.5,deltaT)
-        if iteration % 200 == 0:
-            dOut = open('out/noz.csv','w')
-            for i in range(nCells):
-                x = cellCentres[i]
-                u = wv[0,i]
-                a = math.sqrt(gamma*R*wv[2,i])
-                dOut.write('%14.10f,%14.10f\n'%(x,u/a))
-            dOut.close()
-            raw_input()
-        iteration += 1
         t+= deltaT
-        print(t)
-        
         
         
     #We now compare to the analytical solution and get the error
@@ -454,142 +422,3 @@ def test_solver_nozzle():
     
 
     
-    
-def test_solver_fanno():
-    """Tests the solver against a known Fanno flow solution. This case tests the use of 
-    a source term to model the momentum loss.
-    
-    The Fanno flow solution is taken from a 3A3 questions sheet. A tank at 
-    p0=29.65 bar and T0=400K is vented to atmosphere down a 1m long,
-    25mm diameter pipe.
-    
-    The tank exist is a ConDi nozzle accelerating the flow
-    to M=2.92 at pipe inlet. The c_f of the pipe is 0.005.
-    
-    The solution has a shock at M=2.02 located at L = 0.249m.
-    """
-    [gamma,R]       = c.getGasProperties('air')
-    
-    #We set up the geometry.
-    xR  = 0.1   #start of the convergent section
-    xT  = 0.2   #start of the throat
-    xE  = 0.26  #start of the expansion
-    xP  = 0.4   #start of the pipe, The first 0.1m is frictionless
-    L   = 1.5   #Total length
-    
-    cf  = 0.005 #friction coefficient
-    
-    pAtm = 1e5
-    TAtm = 298
-    
-    p0   = 29.65e5
-    T0   = 400.
-    
-    
-    nCells = 450
-    
-    #We calculate the areas
-    Ap  = math.pi*0.25*(25e-3)**2.  #Area of a 25mm diameter pipe
-    print(c.calcNonDimMassFlow(gamma,2.92))
-    At  = Ap*c.calcNonDimMassFlow(gamma,2.92)/c.calcChokeMassFlow(gamma)
-    Ai  = At*c.calcChokeMassFlow(gamma)/c.calcNonDimMassFlow(gamma,0.4) #Choose the inlet area to have M = 0.4 in
-    
-    #We construct the geometry
-    cw              = L/nCells  #Cell width
-    cellCentres     = np.linspace(cw/2.,L-cw/2.,nCells)    #Calculate cell centres
-    cellAreas       = np.zeros(nCells)
-    
-    states          = np.zeros([3,nCells])
-    wv              = np.zeros([4,nCells])
-    
-    [gamma,R]       = c.getGasProperties('air')
-
-    for i in range(nCells):
-        #We set up the areas and the states
-        rho  = p0/(R*T0)
-        p    = p0
-        
-        states[0,i] = rho
-        states[1,i] = 0.
-        states[2,i] = p/(gamma-1.)
-        
-        xLoc = cellCentres[i]
-        
-        #We calculate the area
-        if xLoc < xR:
-            #In the chamber with constant area
-            A = Ai
-        elif xLoc < xT:
-            A = (math.sqrt(Ai) + (math.sqrt(At)-math.sqrt(Ai))*(xLoc-xR)/(xT-xR))**2.
-        elif xLoc < xE:
-            A = At
-        elif xLoc<xP:
-            A = (math.sqrt(At) + (math.sqrt(Ap)-math.sqrt(At))*(xLoc-xE)/(xP-xE))**2.
-        else:
-            A = Ap
-        
-        cellAreas[i] = A
-    
-    #We defien the source function
-    def RayleighSource(state,wv,vol,index,cf,xStart,D):
-        #cf : friction coefficient
-        #xStart location where we need to consider friction
-        #D: pipe diameter
-        #Assumes no variation in area
-        xLoc = cellCentres[index]
-        
-        u = wv[0]
-        tau = cf*0.5*state[1]*u     #cf*0.5*rho*u*u
-        
-        A = math.pi*D*cw
-        
-        force = tau*A
-        
-        direction = -np.sign(u)
-        
-        if xLoc >= xStart:
-            force *= direction
-        else:
-            force = 0.0
-        #print(force)
-        return np.array([0.,force,0.])
-    
-    #We now set up the inlet fluxes and outlet fluxes
-    inletFlux = c.stagnFlux
-    inletFlux.rhoInlet = p0/(R*T0)
-
-    inFlux  = lambda state,wv: inletFlux(state,wv,gamma,R,p0,T0,0.01)
-    
-    outletFlux = lambda state,wv: c.exhaustFlux(state,wv,gamma,R,pAtm)
-    
-    source = lambda state,wv,vol,index : RayleighSource(state,wv,vol,index,cf,0.5,25e-3)
-    
-    solver = c.FiniteVolumeSolver1D(cellCentres,cellAreas,states,wv,[gamma,R],
-                                    inletFluxFunc = inFlux, outletFluxFunc = outletFlux,
-                                    source = source)
-    
-    t       = 0.
-    targT   = 0.1
-    iteration = 0
-    while t < targT:
-        deltaT = targT-t
-        deltaT = solver.timestep(0.45,deltaT)
-        t+= deltaT
-        
-        if iteration % 10000== 0:
-            dFile = open('out/debug.csv','w',0)
-            dFile.write('x,d,u,p,T\n')
-            for i in range(nCells):
-                xLoc = cellCentres[i]
-                d = math.sqrt(4*cellAreas[i]/math.pi)
-                dFile.write('%14.10f,%14.10f,%14.10f,%14.10f,%14.10f\n'%(xLoc,d,
-                                                                                 wv[0,i],
-                                                                                 wv[1,i],
-                                                                                 wv[2,i]))
-            dFile.close()
-            raw_input()
-        iteration += 1
-        print(t)
-    assert False
-
-test_solver_shockTube()

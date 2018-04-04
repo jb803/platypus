@@ -6,6 +6,9 @@ matrix:
       env: TOX_ENV=py27-test
 dist: trusty
 sudo: true
+before_install:
+  - sudo apt-get install gfortran
+  - provision/travis/installCEA.sh
 install:
   - provision/travis/install.sh
   - pip install -r provision/travis/requirements.txt
